@@ -4,6 +4,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
 import { ChevronsDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { asset } from "@/lib/asset";
 
 gsap.registerPlugin(SplitText, ScrollTrigger);
 
@@ -23,7 +24,7 @@ const achievements: Achievement[] = [
     title: "Bachelor Degree of Information Technology",
     place: "Sulaimani Polytechnic University",
     detail: "9/2022 — 6/2026",
-    image: "/assets/images/education/spu.png",
+    image: asset("assets/images/education/spu.png"),
     imageAlt: "Sulaimani Polytechnic University logo",
   },
   {
@@ -31,7 +32,7 @@ const achievements: Achievement[] = [
     title: "IT Intern",
     place: "Asiacell Telecommunications",
     detail: "07/2025 — 09/2025",
-    image: "/assets/images/education/asiacell.png",
+    image: asset("assets/images/education/asiacell.png"),
     imageAlt: "Asiacell logo",
   },
   {
@@ -39,7 +40,7 @@ const achievements: Achievement[] = [
     title: "IT Intern",
     place: "Dyar Real Estate Company",
     detail: "06/2025 — 07/2025",
-    image: "/assets/images/education/dyar.png",
+    image: asset("assets/images/education/dyar.png"),
     imageAlt: "Dyar Real Estate logo",
   },
   {
@@ -48,7 +49,7 @@ const achievements: Achievement[] = [
     place: "Udemy",
     detail: "View certificate",
     href: "https://www.udemy.com/certificate/UC-4892e095-250e-4e07-85e3-de6ccc39214a",
-    image: "/assets/images/education/udemy.png",
+    image: asset("assets/images/education/udemy.png"),
     imageAlt: "Udemy logo",
   },
 ];

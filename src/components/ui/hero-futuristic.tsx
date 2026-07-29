@@ -26,6 +26,7 @@ import {
   mix,
   add,
 } from "three/tsl";
+import { asset } from "@/lib/asset";
 
 /** Paired color + depth maps required for parallax scan effect */
 const TEXTUREMAP = { src: "https://i.postimg.cc/XYwvXN8D/img-4.png" };
@@ -426,7 +427,7 @@ export function HeroFuturistic({
           <a
             ref={resumeButtonRef}
             className="glow-button"
-            href="/assets/docs/resume.pdf"
+            href={asset("assets/docs/resume.pdf")}
             target="_blank"
             rel="noopener noreferrer"
             onPointerMove={handleResumePointerMove}

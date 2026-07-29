@@ -3,6 +3,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ScrambleTextPlugin } from "gsap/ScrambleTextPlugin";
 import { PerspectiveMarquee } from "../ui/perspective-marquee";
+import { asset } from "@/lib/asset";
 
 gsap.registerPlugin(ScrollTrigger, ScrambleTextPlugin);
 
@@ -75,7 +76,7 @@ export function About() {
           <div className="about-reveal lg:col-span-5">
             <div className="about-portrait">
               <img
-                src="/assets/images/about-me.png"
+                src={asset("assets/images/about-me.png")}
                 alt="Aran Adnan in profile against a red illuminated ring"
                 className="about-portrait__image"
               />

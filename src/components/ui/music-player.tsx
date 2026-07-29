@@ -3,19 +3,20 @@ import { AnimatePresence, motion } from "framer-motion";
 import { SkipBack, SkipForward } from "lucide-react";
 import useSound from "use-sound";
 import { cn } from "@/lib/utils";
+import { asset } from "@/lib/asset";
 
 const TRACKS = [
   {
-    src: "/assets/audio/artbat-horizon.mp3",
+    src: asset("assets/audio/artbat-horizon.mp3"),
     title: "Horizon",
     artist: "ARTBAT",
   },
   {
-    src: "/assets/audio/videoclub-roi.mp3",
+    src: asset("assets/audio/videoclub-roi.mp3"),
     title: "Roi (instrumental)",
     artist: "VIDEOCLUB",
   },
-] as const;
+];
 
 const BARS = 5;
 

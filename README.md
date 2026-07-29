@@ -17,27 +17,24 @@ Open http://localhost:3000
 - `npm run build` — production build
 - `npm run preview` — preview production build
 
+## Deploy (GitHub Pages)
+
+Repo: `thy-aran/portfolio` → **https://thy-aran.github.io/portfolio/**
+
+1. Push these changes to `main`
+2. GitHub → **Settings → Pages**
+3. Set **Source** to **GitHub Actions** (not “Deploy from a branch”)
+4. Workflow `.github/workflows/deploy.yml` builds with `base: /portfolio/` and publishes `dist`
+
+A blank page usually means JS/CSS were requested from `/assets/...` instead of `/portfolio/assets/...`. The `base` setting and `asset()` helper fix that.
+
 ## Structure
 
 ```
-public/assets/          # all static media
-  audio/                # background tracks
-  docs/                 # resume.pdf
-  images/
-    about-me.png
-    education/          # education logos
-    projects/           # project screenshots
-src/
-  components/
-    layout/             # navbar, loading
-    sections/           # page sections
-    ui/                 # shared UI / hero / player
-  data/                 # project content
-  hooks/
-  lib/
+public/assets/   # audio, docs, images
+src/             # app code
 ```
 
 Alias: `@/*` → `src/*`
 
 **Note:** The hero uses WebGPU (Chrome/Edge recommended).
-# portfolio
