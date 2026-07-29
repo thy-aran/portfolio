@@ -1,0 +1,37 @@
+---
+description: Require GSAP line-split scroll text effect on portfolio copy
+alwaysApply: true
+---
+
+# GSAP split-lines text effect
+
+Every body paragraph, section intro, project title, project tagline, project description, and tech-stack label in this portfolio MUST use the responsive line-split on scroll effect from [GSAP demo](https://demos.gsap.com/demo/responsive-line-splits-on-scroll/) / [CodePen GggpRoB](https://codepen.io/GreenSock/pen/GggpRoB).
+
+## How to apply
+
+Add the class `split-lines` to the text element. The App-level `useSplitLines` hook binds GSAP SplitText automatically (including nodes added later).
+
+```tsx
+// ✅ GOOD
+<p className="split-lines mt-5 text-chrome/55 font-light">…</p>
+<h3 className="split-lines">{project.name}</h3>
+<li className="split-lines">{tech}</li>
+
+// ❌ BAD — plain copy without the effect
+<p className="mt-5 text-chrome/55 font-light">…</p>
+```
+
+## Implementation contract
+
+- Do **not** re-implement SplitText inline in section components for paragraphs.
+- Reuse `src/lib/split-lines.ts` / `useSplitLines` only.
+- Pattern: `type: "lines"`, `mask: "lines"`, `autoSplit: true`, lines from `yPercent: 110`.
+- Respect `prefers-reduced-motion: reduce` (hook already skips binding).
+
+## Do not split
+
+- Nav labels, buttons, form status, section eyebrow labels (`.section-label`), footer microcopy, loading screen, and Services horizontal character-scroll headline (already uses a different SplitText).
+
+## When adding new copy
+
+If you add a new paragraph, heading, or tech chip in a content section, add `split-lines` in the same change. No exceptions for About, Projects, or future content blocks.
