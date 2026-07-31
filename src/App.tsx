@@ -23,8 +23,8 @@ export default function App() {
       <div className="grain" aria-hidden />
       <GlowCursor />
       {!ready && <LoadingScreen onDone={() => setReady(true)} />}
+      <Navbar />
       <div className="relative z-10">
-        <Navbar />
         <main>
           <Hero active={ready} />
           <About />

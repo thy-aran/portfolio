@@ -226,7 +226,7 @@ export function Skills() {
   };
 
   return (
-    <section id="skills" ref={root} className="expertise-section relative overflow-x-hidden">
+    <section id="skills" ref={root} className="expertise-section relative">
       <div className="ambient-orb w-[480px] h-[480px] bg-blood-glow/15 top-1/2 -translate-y-1/2 right-[-12rem]" />
       <div className="expertise-grid-pattern" aria-hidden />
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 md:px-10 py-14 md:py-12">

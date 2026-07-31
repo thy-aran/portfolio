@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import gsap from "gsap";
 import { ScrollToPlugin } from "gsap/ScrollToPlugin";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import {
   Home,
   User,
@@ -12,7 +11,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-gsap.registerPlugin(ScrollToPlugin, ScrollTrigger);
+gsap.registerPlugin(ScrollToPlugin);
 
 const links = [
   { href: "#hero", label: "Home", id: "hero", Icon: Home },
@@ -22,6 +21,38 @@ const links = [
   { href: "#projects", label: "Projects", id: "projects", Icon: FolderKanban },
   { href: "#contact", label: "Contact", id: "contact", Icon: Mail },
 ];
+
+/** Scroll to a section, accounting for ScrollTrigger pin spacers in document flow. */
+function scrollToSection(id: string) {
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  gsap.killTweensOf(window);
+
+  const y =
+    id === "hero" ? 0 : Math.max(0, Math.round(window.scrollY + el.getBoundingClientRect().top));
+
+  if (reduceMotion) {
+    window.scrollTo(0, y);
+    return;
+  }
+
+  // Distance-scaled duration so long jumps still finish cleanly
+  const distance = Math.abs(window.scrollY - y);
+  const duration = Math.min(1.35, Math.max(0.55, distance / 3500));
+
+  // autoKill:false — pin scrub updates can look like user scroll and abort the tween
+  gsap.to(window, {
+    duration,
+    ease: "power2.inOut",
+    overwrite: true,
+    scrollTo: {
+      y,
+      autoKill: false,
+    },
+  });
+}
 
 export function Navbar() {
   const [active, setActive] = useState("hero");
@@ -39,11 +70,17 @@ export function Navbar() {
     const ids = links.map((l) => l.id);
     const observer = new IntersectionObserver(
       (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) setActive(entry.target.id);
-        });
+        // Prefer the entry closest to the viewport center
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort(
+            (a, b) =>
+              Math.abs(a.boundingClientRect.top + a.boundingClientRect.height / 2 - window.innerHeight / 2) -
+              Math.abs(b.boundingClientRect.top + b.boundingClientRect.height / 2 - window.innerHeight / 2),
+          );
+        if (visible[0]?.target.id) setActive(visible[0].target.id);
       },
-      { rootMargin: "-40% 0px -45% 0px", threshold: 0.1 },
+      { rootMargin: "-35% 0px -45% 0px", threshold: [0.08, 0.2, 0.4] },
     );
     ids.forEach((id) => {
       const el = document.getElementById(id);
@@ -69,28 +106,27 @@ export function Navbar() {
     return () => window.removeEventListener("resize", update);
   }, [focusIndex]);
 
-  const goTo = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
-    const target = document.querySelector(href);
-    if (!target) return;
+  const goTo = (event: MouseEvent<HTMLAnchorElement>, id: string) => {
     event.preventDefault();
-
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    gsap.to(window, {
-      duration: reduceMotion ? 0 : 1.1,
-      ease: "power2.inOut",
-      overwrite: true,
-      scrollTo: { y: href, autoKill: true },
-    });
+    event.stopPropagation();
+    setActive(id);
+    setHovered(null);
+    scrollToSection(id);
+    try {
+      history.replaceState(null, "", `#${id}`);
+    } catch {
+      /* ignore */
+    }
   };
 
   return (
-    <header className="nav-header pointer-events-none fixed z-50">
+    <header className="nav-header">
       <nav
-        className="nav-dock pointer-events-auto"
+        className="nav-dock"
         aria-label="Primary"
         onMouseLeave={() => setHovered(null)}
       >
-        <div className="relative">
+        <div className="nav-dock__inner">
           <div
             className="nav-dock__spotlight"
             aria-hidden
@@ -103,7 +139,7 @@ export function Navbar() {
             <span className="nav-dock__floor" />
           </div>
 
-          <ul ref={listRef} className="nav-dock__list relative z-[2]">
+          <ul ref={listRef} className="nav-dock__list">
             {links.map((link) => {
               const isLit = focusId === link.id;
               const Icon = link.Icon;
@@ -113,13 +149,14 @@ export function Navbar() {
                     href={link.href}
                     aria-label={link.label}
                     title={link.label}
+                    aria-current={active === link.id ? "true" : undefined}
                     className={cn("nav-dock__link", isLit && "is-active")}
-                    onClick={(event) => goTo(event, link.href)}
+                    onClick={(event) => goTo(event, link.id)}
                     onMouseEnter={() => setHovered(link.id)}
                     onFocus={() => setHovered(link.id)}
                     onBlur={() => setHovered(null)}
                   >
-                    <Icon strokeWidth={1.5} className="nav-dock__icon" />
+                    <Icon strokeWidth={1.5} className="nav-dock__icon" aria-hidden />
                   </a>
                 </li>
               );

@@ -40,7 +40,7 @@ export function Contact() {
   };
 
   return (
-    <section id="contact" className="relative py-20 md:py-24 overflow-hidden">
+    <section id="contact" className="relative py-20 md:py-24">
       <div className="ambient-orb w-[480px] h-[480px] bg-blood-mid/35 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
       <div className="relative max-w-7xl mx-auto px-6 md:px-10">
         <div className="grid lg:grid-cols-12 gap-12 lg:gap-16">

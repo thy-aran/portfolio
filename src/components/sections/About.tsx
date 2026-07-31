@@ -67,7 +67,7 @@ export function About() {
     <section
       id="about"
       ref={root}
-      className="about-section relative py-20 md:py-24 overflow-hidden"
+      className="about-section relative py-20 md:py-24"
     >
       <div className="ambient-orb w-[460px] h-[460px] bg-blood-deep/45 top-1/3 -translate-y-1/2 -left-32" />
       <div className="ambient-orb w-[320px] h-[320px] bg-blood-mid/20 bottom-0 -right-32" />

@@ -142,8 +142,10 @@ export function Projects() {
             ease: "none",
             scrollTrigger: {
               trigger: laptop,
-              start: () => (isMobile() ? "top 70%" : "bottom 72%"),
-              end: () => (isMobile() ? "bottom 28%" : "bottom 18%"),
+              // Mobile: stay open until the whole laptop is above mid-screen,
+              // then ease closed over the remaining upward travel.
+              start: () => (isMobile() ? "bottom center" : "bottom 72%"),
+              end: () => (isMobile() ? "bottom 8%" : "bottom 18%"),
               scrub: 0.65,
               invalidateOnRefresh: true,
             },
@@ -382,7 +384,7 @@ export function Projects() {
     <section
       id="projects"
       ref={root}
-      className="projects-showcase relative overflow-hidden py-20 md:py-24"
+      className="projects-showcase relative py-20 md:py-24"
     >
       <div className="absolute inset-0 pointer-events-none">
         <div className="ambient-orb w-[500px] h-[500px] bg-blood-mid/25 top-1/3 left-1/3" />

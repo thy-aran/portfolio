@@ -271,9 +271,11 @@ export function Services() {
           <span className="services-horizontal__line" />
           <span>Creative engineering</span>
         </div>
-        <h2 ref={text} className="services-horizontal__text">
-          With a mix of creativity and knowledge, I develop unique and never-seen-before projects
-        </h2>
+        <div className="services-horizontal__clip">
+          <h2 ref={text} className="services-horizontal__text">
+            With a mix of creativity and knowledge, I develop unique and never-seen-before projects
+          </h2>
+        </div>
         <div ref={prompt} className="services-horizontal__prompt" aria-hidden>
           <span className="services-horizontal__prompt-glow" />
           <span className="services-horizontal__mouse">
@@ -284,7 +286,7 @@ export function Services() {
         </div>
       </section>
 
-      <section className="services-list relative py-20 md:py-24 overflow-hidden">
+      <section className="services-list relative py-20 md:py-24">
         <div className="ambient-orb w-[420px] h-[420px] bg-blood-deep/35 top-1/2 -translate-y-1/2 -right-40" />
         <div className="relative max-w-7xl mx-auto px-6 md:px-10">
           <div className="mb-14 md:mb-20 flex flex-col md:flex-row md:items-end md:justify-between gap-6">

@@ -2,7 +2,14 @@
 
 import { Canvas, extend, useFrame, useThree } from "@react-three/fiber";
 import { useAspect, useTexture } from "@react-three/drei";
-import { useMemo, useRef, useState, useEffect, Suspense } from "react";
+import {
+  useMemo,
+  useRef,
+  useState,
+  useEffect,
+  useCallback,
+  Suspense,
+} from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { Github, Linkedin } from "lucide-react";
 import gsap from "gsap";
@@ -27,6 +34,7 @@ import {
   add,
 } from "three/tsl";
 import { asset } from "@/lib/asset";
+import { cn } from "@/lib/utils";
 
 /** Paired color + depth maps required for parallax scan effect */
 const TEXTUREMAP = { src: "https://i.postimg.cc/XYwvXN8D/img-4.png" };
@@ -123,15 +131,24 @@ function useResponsiveScale() {
   return scale;
 }
 
-const Scene = () => {
+const Scene = ({ onReady }: { onReady?: () => void }) => {
   const [rawMap, depthMap] = useTexture([TEXTUREMAP.src, DEPTHMAP.src]);
   const meshRef = useRef<Mesh>(null);
   const [visible, setVisible] = useState(false);
   const scaleFactor = useResponsiveScale();
+  const readySent = useRef(false);
 
   useEffect(() => {
-    if (rawMap && depthMap) setVisible(true);
-  }, [rawMap, depthMap]);
+    if (!rawMap || !depthMap) return;
+    setVisible(true);
+    // Brief buffer so the first opaque frames paint before the loader fades
+    const timer = window.setTimeout(() => {
+      if (readySent.current) return;
+      readySent.current = true;
+      onReady?.();
+    }, 420);
+    return () => window.clearTimeout(timer);
+  }, [rawMap, depthMap, onReady]);
 
   const { material, uniforms } = useMemo(() => {
     const uPointer = uniform(new THREE.Vector2(0));
@@ -273,7 +290,33 @@ export function HeroFuturistic({
   const [subtitleVisible, setSubtitleVisible] = useState(false);
   const [delays, setDelays] = useState<number[]>([]);
   const [roleDelays, setRoleDelays] = useState<number[]>([]);
+  const [objectReady, setObjectReady] = useState(false);
+  const [loaderMounted, setLoaderMounted] = useState(true);
   const resumeButtonRef = useRef<HTMLAnchorElement>(null);
+
+  const handleObjectReady = useCallback(() => {
+    setObjectReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!active) {
+      setObjectReady(false);
+      setLoaderMounted(true);
+    }
+  }, [active]);
+
+  // Don't leave the loader stuck if WebGPU / textures fail
+  useEffect(() => {
+    if (!active || objectReady) return;
+    const timer = window.setTimeout(() => setObjectReady(true), 12000);
+    return () => window.clearTimeout(timer);
+  }, [active, objectReady]);
+
+  useEffect(() => {
+    if (!objectReady) return;
+    const timer = window.setTimeout(() => setLoaderMounted(false), 700);
+    return () => window.clearTimeout(timer);
+  }, [objectReady]);
 
   const handleResumePointerMove = (
     event: ReactPointerEvent<HTMLAnchorElement>
@@ -381,9 +424,25 @@ export function HeroFuturistic({
           <Suspense fallback={null}>
             <ScanProgressSync />
             <PostProcessing fullScreenEffect strength={0.85} threshold={0.85} />
-            <Scene />
+            <Scene onReady={handleObjectReady} />
           </Suspense>
         </Canvas>
+      ) : null}
+
+      {/* Themed buffer while WebGPU + depth textures initialize */}
+      {active && loaderMounted ? (
+        <div
+          className={cn("hero-object-loader", objectReady && "is-done")}
+          role="status"
+          aria-live="polite"
+          aria-busy={!objectReady}
+        >
+          <div className="hero-object-loader__glow" aria-hidden />
+          <p className="hero-object-loader__label">Wait for object to load</p>
+          <div className="hero-object-loader__track" aria-hidden>
+            <span className="hero-object-loader__beam" />
+          </div>
+        </div>
       ) : null}
 
       {/* Slight black scrim so typography reads as sitting on top of the 3D object */}
