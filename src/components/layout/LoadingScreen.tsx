@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
+import { getAboutImageSrc } from "@/lib/preload-portfolio";
 
 type LoadingScreenProps = {
   /** 0–100 from asset preload */
@@ -18,6 +19,7 @@ export function LoadingScreen({ progress, assetsReady, onDone }: LoadingScreenPr
   const displayRef = useRef(0);
   const barFillRef = useRef<HTMLDivElement>(null);
   const percentRef = useRef<HTMLSpanElement>(null);
+  const aboutSrc = getAboutImageSrc();
 
   useEffect(() => {
     const glow = document.getElementById("load-glow");
@@ -30,7 +32,6 @@ export function LoadingScreen({ progress, assetsReady, onDone }: LoadingScreenPr
       onComplete: () => setIntroComplete(true),
     });
 
-    // Shorter brand intro — progress bar carries the wait feel
     tl.to(glow, { opacity: 1, scale: 1.12, duration: 0.7 })
       .fromTo(brand, { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.55 }, "-=0.4")
       .to(line, { scaleX: 1, duration: 0.5 }, "-=0.2")
@@ -77,7 +78,6 @@ export function LoadingScreen({ progress, assetsReady, onDone }: LoadingScreenPr
     return () => cancelAnimationFrame(raf);
   }, [progress, assetsReady]);
 
-  // Dismiss only when intro done, assets ready, and bar has reached ~100
   useEffect(() => {
     if (!introComplete || !assetsReady || displayPercent < 100) return;
 
@@ -111,6 +111,17 @@ export function LoadingScreen({ progress, assetsReady, onDone }: LoadingScreenPr
       aria-valuenow={displayPercent}
       role="progressbar"
     >
+      {/* In-DOM warm for Safari — same URL as About portrait */}
+      <img
+        data-preload-about="1"
+        src={aboutSrc}
+        alt=""
+        aria-hidden
+        decoding="async"
+        fetchPriority="high"
+        className="pointer-events-none absolute h-px w-px opacity-0"
+      />
+
       <div
         id="load-glow"
         className="absolute w-[280px] h-[280px] rounded-full opacity-0"
@@ -123,7 +134,8 @@ export function LoadingScreen({ progress, assetsReady, onDone }: LoadingScreenPr
       <div className="relative z-10 flex flex-col items-center gap-7 px-6 w-full max-w-sm">
         <p
           id="load-brand"
-          className="font-display text-4xl sm:text-5xl md:text-6xl font-bold tracking-brand text-white opacity-0"
+          className="font-display text-4xl sm:text-5xl md:text-6xl font-bold tracking-brand text-center text-white opacity-0 w-full"
+          style={{ paddingLeft: "0.28em" }}
         >
           ARAN ADNAN
         </p>

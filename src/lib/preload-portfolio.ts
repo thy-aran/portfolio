@@ -1,6 +1,8 @@
 import { asset } from "@/lib/asset";
 import { projects } from "@/data/projects";
 
+const ABOUT_SRC = asset("assets/images/about-me.png");
+
 const HERO_TEXTURES = [
   "https://i.postimg.cc/XYwvXN8D/img-4.png",
   "https://i.postimg.cc/2SHKQh2q/raw-4.webp",
@@ -11,23 +13,35 @@ const AUDIO_TRACKS = [
   asset("assets/audio/videoclub-roi.mp3"),
 ];
 
-/** First-viewport assets — block onboarding on these only */
-function criticalUrls(): string[] {
-  return [asset("assets/images/about-me.png")];
+export function getAboutImageSrc() {
+  return ABOUT_SRC;
 }
 
-/** Warm later while the user is already in the site */
+/** Inject early so Safari starts the request before React mounts. */
+export function injectAboutImagePreload() {
+  if (typeof document === "undefined") return;
+  const existing = document.querySelector(`link[data-preload-about="1"]`);
+  if (existing) return;
+
+  const link = document.createElement("link");
+  link.rel = "preload";
+  link.as = "image";
+  link.href = ABOUT_SRC;
+  link.setAttribute("data-preload-about", "1");
+  document.head.appendChild(link);
+}
+
 function secondaryUrls(): string[] {
   const urls = new Set<string>();
   for (const src of HERO_TEXTURES) urls.add(src);
   for (const project of projects) {
-    // First shot per project is enough for cards; rest loads on demand
     if (project.shots[0]) urls.add(project.shots[0]);
   }
   return [...urls];
 }
 
-function loadImage(src: string, timeoutMs = 4000): Promise<void> {
+/** Soft warm — may resolve on timeout; never blocks onboarding. */
+function loadImageSoft(src: string, timeoutMs = 8000): Promise<void> {
   return new Promise((resolve) => {
     const img = new Image();
     let settled = false;
@@ -40,6 +54,55 @@ function loadImage(src: string, timeoutMs = 4000): Promise<void> {
     img.onload = () => finish();
     img.onerror = () => finish();
     img.src = src;
+    window.setTimeout(finish, timeoutMs);
+  });
+}
+
+/**
+ * Hard wait for a critical image: decode into memory, long safety timeout only.
+ * Prefers an in-DOM <img> (Safari shares that request with the real portrait).
+ */
+function loadImageHard(src: string, timeoutMs = 20_000): Promise<void> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+
+    const fromDom = document.querySelector<HTMLImageElement>(
+      `img[data-preload-about="1"]`,
+    );
+
+    const bind = (img: HTMLImageElement) => {
+      const done = async () => {
+        try {
+          if (typeof img.decode === "function") await img.decode();
+        } catch {
+          /* decode can reject if already broken — still continue */
+        }
+        finish();
+      };
+
+      if (img.complete && img.naturalWidth > 0) {
+        void done();
+        return;
+      }
+      img.addEventListener("load", () => void done(), { once: true });
+      img.addEventListener("error", finish, { once: true });
+      if (!img.src) img.src = src;
+    };
+
+    if (fromDom) {
+      bind(fromDom);
+    } else {
+      const img = new Image();
+      img.decoding = "async";
+      img.src = src;
+      bind(img);
+    }
+
     window.setTimeout(finish, timeoutMs);
   });
 }
@@ -62,58 +125,53 @@ function loadAudioHint(src: string, timeoutMs = 2500): Promise<void> {
 }
 
 export type PreloadProgress = {
-  /** 0–100 */
   percent: number;
   done: number;
   total: number;
 };
 
 /**
- * Fast gate for onboarding: about portrait + fonts.
- * Reports progress so the loading UI can show a percentage buffer.
- * Secondary assets keep warming in the background after this resolves.
+ * Gate onboarding on the about portrait (hard) + fonts (soft).
+ * Everything else warms in the background after dismiss.
  */
 export async function preloadPortfolioAssets(
   onProgress?: (progress: PreloadProgress) => void,
 ): Promise<void> {
-  const urls = criticalUrls();
+  injectAboutImagePreload();
+
   let done = 0;
-  const total = urls.length + 1; // + fonts
+  const total = 2; // about + fonts
 
   const report = () => {
     onProgress?.({
       done,
       total,
-      percent: Math.round((done / total) * 100),
+      percent: Math.min(100, Math.round((done / total) * 100)),
     });
   };
 
   report();
 
   await Promise.all([
-    ...urls.map((src) =>
-      loadImage(src, 4500).then(() => {
-        done += 1;
-        report();
-      }),
-    ),
+    loadImageHard(ABOUT_SRC).then(() => {
+      done += 1;
+      report();
+    }),
     Promise.race([
       document.fonts?.ready ?? Promise.resolve(),
-      new Promise<void>((r) => window.setTimeout(r, 2500)),
+      new Promise<void>((r) => window.setTimeout(r, 2000)),
     ]).then(() => {
       done += 1;
       report();
     }),
   ]);
 
-  // Don't block the user — warm the rest quietly
   void warmSecondaryAssets();
 }
 
 function warmSecondaryAssets() {
   for (const src of secondaryUrls()) {
-    void loadImage(src, 8000);
+    void loadImageSoft(src, 8000);
   }
-  // First track only — enough for a responsive first play
   if (AUDIO_TRACKS[0]) void loadAudioHint(AUDIO_TRACKS[0], 4000);
 }

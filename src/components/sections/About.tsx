@@ -30,13 +30,14 @@ export function About() {
     const ctx = gsap.context(() => {
       gsap.from(".about-reveal", {
         autoAlpha: 0,
-        y: reduceMotion ? 0 : 34,
-        duration: reduceMotion ? 0 : 0.9,
-        stagger: reduceMotion ? 0 : 0.1,
+        y: reduceMotion ? 0 : 28,
+        duration: reduceMotion ? 0 : 0.75,
+        stagger: reduceMotion ? 0 : 0.08,
         ease: "power3.out",
         scrollTrigger: {
           trigger: root.current,
-          start: "clamp(top 78%)",
+          // Fire as soon as About enters the viewport (was top 78%)
+          start: "clamp(top 96%)",
           once: true,
         },
       });
@@ -54,7 +55,7 @@ export function About() {
         },
         scrollTrigger: {
           trigger: title.current,
-          start: "top 85%",
+          start: "top 96%",
           once: true,
         },
       });
@@ -80,8 +81,10 @@ export function About() {
                 alt="Aran Adnan in profile against a red illuminated ring"
                 className="about-portrait__image"
                 loading="eager"
-                decoding="async"
+                decoding="sync"
                 fetchPriority="high"
+                width={620}
+                height={775}
               />
               <div className="about-portrait__ring" aria-hidden />
               <div className="about-portrait__chase" aria-hidden />
