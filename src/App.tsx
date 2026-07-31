@@ -33,14 +33,20 @@ function SectionFallback({ minHeight }: { minHeight: string }) {
 export default function App() {
   const [ready, setReady] = useState(false);
   const [assetsReady, setAssetsReady] = useState(false);
+  const [loadProgress, setLoadProgress] = useState(0);
   useSplitLines();
 
   useEffect(() => {
     let cancelled = false;
-    preloadPortfolioAssets()
+    preloadPortfolioAssets((p) => {
+      if (!cancelled) setLoadProgress(p.percent);
+    })
       .catch(() => undefined)
       .finally(() => {
-        if (!cancelled) setAssetsReady(true);
+        if (!cancelled) {
+          setLoadProgress(100);
+          setAssetsReady(true);
+        }
       });
     return () => {
       cancelled = true;
@@ -55,7 +61,11 @@ export default function App() {
       <div className="grain" aria-hidden />
       <GlowCursor />
       {!ready && (
-        <LoadingScreen assetsReady={assetsReady} onDone={onDone} />
+        <LoadingScreen
+          progress={loadProgress}
+          assetsReady={assetsReady}
+          onDone={onDone}
+        />
       )}
       <Navbar />
       <div className="relative z-10">

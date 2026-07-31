@@ -1,15 +1,23 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 
 type LoadingScreenProps = {
-  /** When true, intro may dismiss (assets are warm) */
+  /** 0–100 from asset preload */
+  progress: number;
   assetsReady: boolean;
   onDone: () => void;
 };
 
-export function LoadingScreen({ assetsReady, onDone }: LoadingScreenProps) {
+/** Soft floor so the bar never looks stuck at 0 while the intro plays */
+const INTRO_PROGRESS_CAP = 28;
+
+export function LoadingScreen({ progress, assetsReady, onDone }: LoadingScreenProps) {
   const [mounted, setMounted] = useState(true);
   const [introComplete, setIntroComplete] = useState(false);
+  const [displayPercent, setDisplayPercent] = useState(0);
+  const displayRef = useRef(0);
+  const barFillRef = useRef<HTMLDivElement>(null);
+  const percentRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     const glow = document.getElementById("load-glow");
@@ -22,40 +30,73 @@ export function LoadingScreen({ assetsReady, onDone }: LoadingScreenProps) {
       onComplete: () => setIntroComplete(true),
     });
 
-    tl.to(glow, { opacity: 1, scale: 1.15, duration: 1.1 })
-      .fromTo(brand, { opacity: 0, y: 28 }, { opacity: 1, y: 0, duration: 0.85 }, "-=0.55")
-      .to(line, { scaleX: 1, duration: 0.8 }, "-=0.3")
-      .to(sub, { opacity: 1, duration: 0.45 }, "-=0.25")
-      .to({}, { duration: 0.35 });
+    // Shorter brand intro — progress bar carries the wait feel
+    tl.to(glow, { opacity: 1, scale: 1.12, duration: 0.7 })
+      .fromTo(brand, { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.55 }, "-=0.4")
+      .to(line, { scaleX: 1, duration: 0.5 }, "-=0.2")
+      .to(sub, { opacity: 1, duration: 0.3 }, "-=0.15");
   }, []);
 
-  // Hold until both the brand intro and asset preload finish
+  // Smooth percentage buffer: ease toward target, never jump backwards
   useEffect(() => {
-    if (!introComplete || !assetsReady) return;
+    let raf = 0;
+    const tick = () => {
+      const target = assetsReady
+        ? 100
+        : Math.max(progress, Math.min(INTRO_PROGRESS_CAP, progress + 8));
+
+      const current = displayRef.current;
+      const next =
+        target > current
+          ? current + Math.max(0.35, (target - current) * 0.12)
+          : current;
+
+      const clamped = Math.min(100, next);
+      displayRef.current = clamped;
+      const shown = Math.floor(clamped);
+      setDisplayPercent(shown);
+
+      if (barFillRef.current) {
+        barFillRef.current.style.width = `${clamped}%`;
+      }
+      if (percentRef.current) {
+        percentRef.current.textContent = `${shown}%`;
+      }
+
+      if (clamped < 99.5 || !assetsReady) {
+        raf = requestAnimationFrame(tick);
+      } else {
+        displayRef.current = 100;
+        setDisplayPercent(100);
+        if (barFillRef.current) barFillRef.current.style.width = "100%";
+        if (percentRef.current) percentRef.current.textContent = "100%";
+      }
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [progress, assetsReady]);
+
+  // Dismiss only when intro done, assets ready, and bar has reached ~100
+  useEffect(() => {
+    if (!introComplete || !assetsReady || displayPercent < 100) return;
 
     const screen = document.getElementById("loading-screen");
-    gsap.to(screen, {
+    const fade = gsap.to(screen, {
       opacity: 0,
-      duration: 0.85,
+      duration: 0.55,
       ease: "power2.inOut",
+      delay: 0.12,
       onComplete: () => {
         setMounted(false);
         onDone();
       },
     });
-  }, [introComplete, assetsReady, onDone]);
 
-  useEffect(() => {
-    const sub = document.getElementById("load-sub");
-    if (!sub) return;
-    if (introComplete && !assetsReady) {
-      sub.textContent = "Loading experience";
-    } else if (!assetsReady) {
-      sub.textContent = "Preparing assets";
-    } else {
-      sub.textContent = "Portfolio Experience";
-    }
-  }, [introComplete, assetsReady]);
+    return () => {
+      fade.kill();
+    };
+  }, [introComplete, assetsReady, displayPercent, onDone]);
 
   if (!mounted) return null;
 
@@ -63,8 +104,12 @@ export function LoadingScreen({ assetsReady, onDone }: LoadingScreenProps) {
     <div
       id="loading-screen"
       className="fixed inset-0 z-[10000] bg-void flex items-center justify-center overflow-hidden"
-      aria-busy={!assetsReady}
+      aria-busy={!assetsReady || displayPercent < 100}
       aria-live="polite"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={displayPercent}
+      role="progressbar"
     >
       <div
         id="load-glow"
@@ -75,7 +120,7 @@ export function LoadingScreen({ assetsReady, onDone }: LoadingScreenProps) {
           filter: "blur(20px)",
         }}
       />
-      <div className="relative z-10 flex flex-col items-center gap-8 px-6">
+      <div className="relative z-10 flex flex-col items-center gap-7 px-6 w-full max-w-sm">
         <p
           id="load-brand"
           className="font-display text-4xl sm:text-5xl md:text-6xl font-bold tracking-brand text-white opacity-0"
@@ -85,12 +130,26 @@ export function LoadingScreen({ assetsReady, onDone }: LoadingScreenProps) {
         <div className="w-48 sm:w-64 overflow-hidden">
           <div id="load-line" className="red-line origin-left scale-x-0" />
         </div>
-        <p
-          id="load-sub"
-          className="font-body text-[10px] tracking-[0.35em] uppercase text-chrome/50 opacity-0"
-        >
-          Portfolio Experience
-        </p>
+
+        <div className="w-full max-w-[14rem] sm:max-w-[16rem] flex flex-col items-center gap-3 opacity-100">
+          <div className="load-progress" aria-hidden>
+            <div ref={barFillRef} className="load-progress__fill" />
+          </div>
+          <div className="flex items-center justify-between w-full px-0.5">
+            <p
+              id="load-sub"
+              className="font-body text-[10px] tracking-[0.28em] uppercase text-chrome/50 opacity-0"
+            >
+              {assetsReady ? "Ready" : "Loading"}
+            </p>
+            <span
+              ref={percentRef}
+              className="font-body text-[10px] tracking-[0.2em] tabular-nums text-chrome/55"
+            >
+              {displayPercent}%
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );
