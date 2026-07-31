@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { LoadingScreen } from "@/components/layout/LoadingScreen";
 import { Navbar } from "@/components/layout/Navbar";
 import { Hero } from "@/components/sections/Hero";
@@ -8,6 +8,7 @@ import { GlowCursor } from "@/components/ui/glow-cursor";
 import { MusicPlayer } from "@/components/ui/music-player";
 import { DeferredMount } from "@/components/ui/deferred-mount";
 import { useSplitLines } from "@/hooks/useSplitLines";
+import { preloadPortfolioAssets } from "@/lib/preload-portfolio";
 
 const Skills = lazy(() =>
   import("@/components/sections/Skills").then((m) => ({ default: m.Skills })),
@@ -31,14 +32,31 @@ function SectionFallback({ minHeight }: { minHeight: string }) {
 
 export default function App() {
   const [ready, setReady] = useState(false);
+  const [assetsReady, setAssetsReady] = useState(false);
   useSplitLines();
+
+  useEffect(() => {
+    let cancelled = false;
+    preloadPortfolioAssets()
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setAssetsReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const onDone = useCallback(() => setReady(true), []);
 
   return (
     <>
       <StarfieldBackground count={200} speed={0.32} starColor="#C0C0C0" twinkle />
       <div className="grain" aria-hidden />
       <GlowCursor />
-      {!ready && <LoadingScreen onDone={() => setReady(true)} />}
+      {!ready && (
+        <LoadingScreen assetsReady={assetsReady} onDone={onDone} />
+      )}
       <Navbar />
       <div className="relative z-10">
         <main>

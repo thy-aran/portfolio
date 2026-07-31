@@ -3107,6 +3107,8 @@ main {
 .music-player__meta,
 .music-player__controls {
   pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 .music-player__meta {
   display: flex;

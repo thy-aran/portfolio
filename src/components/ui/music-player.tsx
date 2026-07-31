@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { SkipBack, SkipForward } from "lucide-react";
-import useSound from "use-sound";
 import { cn } from "@/lib/utils";
 import { asset } from "@/lib/asset";
 
@@ -25,36 +24,57 @@ function randomHeights() {
 }
 
 /**
- * Music toggle adapted from Skiper UI / 21st.dev Music Toggle btn
- * @see https://21st.dev/@reuno-ui/components/music-toggle-btn
- * @see https://skiper-ui.com/v1/skiper25
+ * Native HTMLAudioElement — Howler/use-sound often fails on iOS Safari
+ * because play() must stay inside a user gesture.
  */
 export function MusicPlayer() {
   const [visible, setVisible] = useState(false);
   const [trackIndex, setTrackIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [wantPlay, setWantPlay] = useState(false);
   const [heights, setHeights] = useState(() => Array(BARS).fill(0.1) as number[]);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const trackIndexRef = useRef(0);
 
   const track = TRACKS[trackIndex];
 
-  const [play, { pause, stop }] = useSound(track.src, {
-    loop: false,
-    interrupt: true,
-    soundEnabled: true,
-    // Don't decode audio until the user presses play
-    preload: false,
-    onplay: () => setIsPlaying(true),
-    onend: () => {
-      setIsPlaying(false);
-      setTrackIndex((i) => (i + 1) % TRACKS.length);
-      setWantPlay(true);
-    },
-    onpause: () => setIsPlaying(false),
-    onstop: () => setIsPlaying(false),
-  });
+  useEffect(() => {
+    const audio = new Audio();
+    audio.preload = "auto";
+    audio.setAttribute("playsinline", "true");
+    audio.setAttribute("webkit-playsinline", "true");
+    audio.src = TRACKS[0].src;
+    audioRef.current = audio;
 
-  // Reveal once the About section enters (or has been scrolled past) and stay.
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+    const onEnded = () => {
+      setIsPlaying(false);
+      const next = (trackIndexRef.current + 1) % TRACKS.length;
+      trackIndexRef.current = next;
+      setTrackIndex(next);
+      audio.src = TRACKS[next].src;
+      void audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+    };
+
+    audio.addEventListener("play", onPlay);
+    audio.addEventListener("pause", onPause);
+    audio.addEventListener("ended", onEnded);
+
+    return () => {
+      audio.removeEventListener("play", onPlay);
+      audio.removeEventListener("pause", onPause);
+      audio.removeEventListener("ended", onEnded);
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
+      audioRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    trackIndexRef.current = trackIndex;
+  }, [trackIndex]);
+
   useEffect(() => {
     const about = document.getElementById("about");
     if (!about) return;
@@ -81,16 +101,6 @@ export function MusicPlayer() {
     };
   }, []);
 
-  // Auto-play after track change when the previous track ended.
-  useEffect(() => {
-    if (!wantPlay) return;
-    const id = window.setTimeout(() => {
-      play();
-      setWantPlay(false);
-    }, 80);
-    return () => window.clearTimeout(id);
-  }, [trackIndex, wantPlay, play]);
-
   useEffect(() => {
     if (!isPlaying) {
       setHeights(Array(BARS).fill(0.1));
@@ -100,34 +110,39 @@ export function MusicPlayer() {
     return () => window.clearInterval(id);
   }, [isPlaying]);
 
-  useEffect(() => {
-    return () => {
-      try {
-        stop();
-      } catch {
-        /* sound may already be disposed */
-      }
-    };
-  }, [stop]);
-
   const toggle = () => {
-    if (isPlaying) {
-      pause();
-      setWantPlay(false);
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (!audio.paused) {
+      audio.pause();
       return;
     }
-    play();
+
+    // Synchronous play() inside the tap — required by Safari
+    if (!audio.getAttribute("src")) {
+      audio.src = TRACKS[trackIndexRef.current].src;
+    }
+    void audio.play().catch(() => setIsPlaying(false));
   };
 
   const skip = (dir: number) => {
-    try {
-      stop();
-    } catch {
-      /* ignore */
+    const audio = audioRef.current;
+    const next = (trackIndexRef.current + dir + TRACKS.length) % TRACKS.length;
+    const shouldResume = Boolean(audio && !audio.paused);
+
+    trackIndexRef.current = next;
+    setTrackIndex(next);
+
+    if (!audio) return;
+
+    audio.pause();
+    audio.src = TRACKS[next].src;
+    if (shouldResume) {
+      void audio.play().catch(() => setIsPlaying(false));
+    } else {
+      setIsPlaying(false);
     }
-    setIsPlaying(false);
-    setTrackIndex((i) => (i + dir + TRACKS.length) % TRACKS.length);
-    setWantPlay(true);
   };
 
   return (

@@ -79,6 +79,9 @@ export function About() {
                 src={asset("assets/images/about-me.png")}
                 alt="Aran Adnan in profile against a red illuminated ring"
                 className="about-portrait__image"
+                loading="eager"
+                decoding="async"
+                fetchPriority="high"
               />
               <div className="about-portrait__ring" aria-hidden />
               <div className="about-portrait__chase" aria-hidden />

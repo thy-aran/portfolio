@@ -146,10 +146,9 @@ export function Projects() {
             ease: "none",
             scrollTrigger: {
               trigger: laptop,
-              // Mobile: stay open until the whole laptop is above mid-screen,
-              // then ease closed over the remaining upward travel.
-              start: () => (isMobile() ? "bottom center" : "bottom 72%"),
-              end: () => (isMobile() ? "bottom 8%" : "bottom 18%"),
+              // Mobile: start closing once the laptop center hits mid-screen
+              start: () => (isMobile() ? "center center" : "bottom 72%"),
+              end: () => (isMobile() ? "top 12%" : "bottom 18%"),
               scrub: 0.65,
               invalidateOnRefresh: true,
             },

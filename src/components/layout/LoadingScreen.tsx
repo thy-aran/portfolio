@@ -1,37 +1,61 @@
 import { useEffect, useState } from "react";
 import gsap from "gsap";
 
-export function LoadingScreen({ onDone }: { onDone: () => void }) {
+type LoadingScreenProps = {
+  /** When true, intro may dismiss (assets are warm) */
+  assetsReady: boolean;
+  onDone: () => void;
+};
+
+export function LoadingScreen({ assetsReady, onDone }: LoadingScreenProps) {
   const [mounted, setMounted] = useState(true);
+  const [introComplete, setIntroComplete] = useState(false);
 
   useEffect(() => {
     const glow = document.getElementById("load-glow");
     const brand = document.getElementById("load-brand");
     const line = document.getElementById("load-line");
     const sub = document.getElementById("load-sub");
-    const screen = document.getElementById("loading-screen");
 
     const tl = gsap.timeline({
       defaults: { ease: "power3.out" },
-      onComplete: () => {
-        gsap.to(screen, {
-          opacity: 0,
-          duration: 0.85,
-          ease: "power2.inOut",
-          onComplete: () => {
-            setMounted(false);
-            onDone();
-          },
-        });
-      },
+      onComplete: () => setIntroComplete(true),
     });
 
     tl.to(glow, { opacity: 1, scale: 1.15, duration: 1.1 })
       .fromTo(brand, { opacity: 0, y: 28 }, { opacity: 1, y: 0, duration: 0.85 }, "-=0.55")
       .to(line, { scaleX: 1, duration: 0.8 }, "-=0.3")
       .to(sub, { opacity: 1, duration: 0.45 }, "-=0.25")
-      .to({}, { duration: 0.4 });
-  }, [onDone]);
+      .to({}, { duration: 0.35 });
+  }, []);
+
+  // Hold until both the brand intro and asset preload finish
+  useEffect(() => {
+    if (!introComplete || !assetsReady) return;
+
+    const screen = document.getElementById("loading-screen");
+    gsap.to(screen, {
+      opacity: 0,
+      duration: 0.85,
+      ease: "power2.inOut",
+      onComplete: () => {
+        setMounted(false);
+        onDone();
+      },
+    });
+  }, [introComplete, assetsReady, onDone]);
+
+  useEffect(() => {
+    const sub = document.getElementById("load-sub");
+    if (!sub) return;
+    if (introComplete && !assetsReady) {
+      sub.textContent = "Loading experience";
+    } else if (!assetsReady) {
+      sub.textContent = "Preparing assets";
+    } else {
+      sub.textContent = "Portfolio Experience";
+    }
+  }, [introComplete, assetsReady]);
 
   if (!mounted) return null;
 
@@ -39,7 +63,8 @@ export function LoadingScreen({ onDone }: { onDone: () => void }) {
     <div
       id="loading-screen"
       className="fixed inset-0 z-[10000] bg-void flex items-center justify-center overflow-hidden"
-      aria-hidden
+      aria-busy={!assetsReady}
+      aria-live="polite"
     >
       <div
         id="load-glow"
