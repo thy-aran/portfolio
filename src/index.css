@@ -2383,25 +2383,46 @@ main {
 
 @media (max-width: 767px) {
   .services-horizontal {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
     height: auto;
     min-height: 78svh;
-    padding: 8rem 0 5rem;
+    padding: 5.75rem 0 4rem;
   }
 
   .services-horizontal__eyebrow {
-    top: 3rem;
-    right: 1.5rem;
-    left: 1.5rem;
+    position: relative;
+    top: auto;
+    right: auto;
+    left: auto;
+    z-index: 2;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.55rem 0.75rem;
+    margin: 0 0 1.35rem;
+    padding: 0 1.25rem;
+  }
+
+  .services-horizontal__clip {
+    position: relative;
+    inset: auto;
+    z-index: 1;
+    display: block;
+    overflow: visible;
+    flex: 1 1 auto;
   }
 
   .services-horizontal__text {
     width: auto;
     max-width: 100%;
-    padding: 0 1.5rem;
+    padding: 0 1.25rem;
     white-space: normal;
-    font-size: clamp(2.6rem, 12vw, 4.4rem);
-    line-height: 1.12;
+    font-size: clamp(2.35rem, 11vw, 3.75rem);
+    line-height: 1.14;
     letter-spacing: -0.045em;
+    text-align: center;
     text-wrap: pretty;
     will-change: auto;
     color: #f4f4f4;
@@ -2471,10 +2492,27 @@ main {
     min-height: 78svh;
   }
 
+  .services-horizontal__eyebrow {
+    position: relative;
+    top: auto;
+    right: auto;
+    left: auto;
+    justify-content: center;
+    margin-bottom: 1.25rem;
+    padding: 0 1.25rem;
+  }
+
+  .services-horizontal__clip {
+    position: relative;
+    inset: auto;
+    overflow: visible;
+  }
+
   .services-horizontal__text {
     width: auto;
     padding: 0 clamp(1.5rem, 8vw, 7rem);
     white-space: normal;
+    text-align: center;
     will-change: auto;
   }
 
@@ -2719,7 +2757,8 @@ main {
   height: 100%;
   overflow: hidden;
   border-radius: 1.85rem;
-  background: #050505;
+  /* Match KAQI navy so any sub-pixel gap reads as the app, not white */
+  background: #0a1628;
 }
 /* Cover the white status/camera dock baked into Flutter screenshots
    so it doesn't clash with the CSS notch — no heavy zoom needed. */
@@ -2734,25 +2773,28 @@ main {
   pointer-events: none;
   background: linear-gradient(
     to bottom,
-    #050505 0%,
-    #050505 72%,
-    rgba(5, 5, 5, 0.85) 88%,
+    #0a1628 0%,
+    #0a1628 72%,
+    rgba(10, 22, 40, 0.85) 88%,
     transparent 100%
   );
 }
 .iphone__preview {
+  position: absolute;
+  /* Overscan a hair so capture fringes / white edges never show */
+  inset: -2px;
   display: block;
-  width: 100%;
-  height: 100%;
-  /* Screenshots match the frame AR (~9:19.2); contain keeps UI readable */
-  object-fit: contain;
+  width: calc(100% + 4px);
+  height: calc(100% + 4px);
+  max-width: none;
+  object-fit: cover;
   object-position: center top;
-  background: #050505;
+  background: #0a1628;
   transform: none;
   transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .macbook-project__trigger:hover .iphone__preview {
-  transform: scale(1.015);
+  transform: scale(1.02);
   transform-origin: center center;
 }
 .iphone__screen-shade {
@@ -2826,15 +2868,10 @@ main {
   .iphone {
     width: min(100%, 15.5rem);
   }
-  /* Keep phone UI readable on small viewports — no extra zoom */
   .iphone__preview {
-    object-fit: contain;
+    object-fit: cover;
     object-position: center top;
     transform: none;
-  }
-  .macbook__preview {
-    object-fit: contain;
-    object-position: center top;
   }
 }
 

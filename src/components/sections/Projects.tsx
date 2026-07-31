@@ -59,6 +59,8 @@ function DevicePreview({
               alt={alt}
               className="iphone__preview"
               loading={full ? undefined : "lazy"}
+              decoding="async"
+              fetchPriority={full ? "high" : "low"}
             />
             {!full && (
               <>
@@ -89,6 +91,8 @@ function DevicePreview({
             alt={alt}
             className="macbook__preview"
             loading={full ? undefined : "lazy"}
+            decoding="async"
+            fetchPriority={full ? "high" : "low"}
           />
           {!full && (
             <>

@@ -8,6 +8,8 @@ export function GlowCursor() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !window.matchMedia("(pointer: fine)").matches) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
     const context = canvas.getContext("2d");
     if (!context) return;
 
@@ -16,9 +18,10 @@ export function GlowCursor() {
     let frame = 0;
     let previousTime = performance.now();
     let dpr = 1;
+    let running = true;
 
     const resize = () => {
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       canvas.width = window.innerWidth * dpr;
       canvas.height = window.innerHeight * dpr;
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -33,8 +36,11 @@ export function GlowCursor() {
       }
       if (points.length > 42) points.shift();
     };
-    const onPointerLeave = () => { pointer.visible = false; };
+    const onPointerLeave = () => {
+      pointer.visible = false;
+    };
     const draw = (time: number) => {
+      if (!running) return;
       const delta = Math.min(time - previousTime, 32);
       previousTime = time;
       context.clearRect(0, 0, window.innerWidth, window.innerHeight);
@@ -47,7 +53,13 @@ export function GlowCursor() {
           continue;
         }
         context.beginPath();
-        context.arc(point.x, point.y, Math.max(0.7, (1 - point.age) * 3.2), 0, Math.PI * 2);
+        context.arc(
+          point.x,
+          point.y,
+          Math.max(0.7, (1 - point.age) * 3.2),
+          0,
+          Math.PI * 2,
+        );
         context.fillStyle = `rgba(193, 18, 31, ${(1 - point.age) * 0.28})`;
         context.shadowColor = "rgba(193, 18, 31, 0.65)";
         context.shadowBlur = 10;
@@ -66,20 +78,43 @@ export function GlowCursor() {
       frame = requestAnimationFrame(draw);
     };
 
+    const onVisibility = () => {
+      if (document.hidden) {
+        running = false;
+        cancelAnimationFrame(frame);
+        context.clearRect(0, 0, window.innerWidth, window.innerHeight);
+        return;
+      }
+      if (!running) {
+        running = true;
+        previousTime = performance.now();
+        frame = requestAnimationFrame(draw);
+      }
+    };
+
     document.documentElement.classList.add("custom-cursor-enabled");
     resize();
     window.addEventListener("resize", resize);
     window.addEventListener("pointermove", onPointerMove, { passive: true });
     document.documentElement.addEventListener("pointerleave", onPointerLeave);
+    document.addEventListener("visibilitychange", onVisibility);
     frame = requestAnimationFrame(draw);
     return () => {
+      running = false;
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", resize);
       window.removeEventListener("pointermove", onPointerMove);
       document.documentElement.removeEventListener("pointerleave", onPointerLeave);
+      document.removeEventListener("visibilitychange", onVisibility);
       document.documentElement.classList.remove("custom-cursor-enabled");
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="pointer-events-none fixed inset-0 z-[11000] h-screen w-screen" aria-hidden />;
+  return (
+    <canvas
+      ref={canvasRef}
+      className="pointer-events-none fixed inset-0 z-[11000] h-screen w-screen"
+      aria-hidden
+    />
+  );
 }

@@ -24,6 +24,21 @@ interface Star {
   twinkleOffset: number;
 }
 
+function resolveStarCount(requested: number) {
+  if (typeof window === "undefined") return requested;
+  const mobile = window.matchMedia("(max-width: 767px)").matches;
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const saveData =
+    "connection" in navigator &&
+    Boolean(
+      (navigator as Navigator & { connection?: { saveData?: boolean } }).connection
+        ?.saveData,
+    );
+  if (reduce || saveData) return Math.min(requested, 80);
+  if (mobile) return Math.min(requested, 120);
+  return requested;
+}
+
 export function StarfieldBackground({
   className,
   children,
@@ -40,17 +55,29 @@ export function StarfieldBackground({
     const container = containerRef.current;
     if (!canvas || !container) return;
 
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", { alpha: false });
     if (!ctx) return;
 
+    const starCount = resolveStarCount(count);
     const rect = container.getBoundingClientRect();
     let width = rect.width;
     let height = rect.height;
+    let dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+
+    const syncSize = () => {
+      dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      canvas.width = Math.max(1, Math.floor(width * dpr));
+      canvas.height = Math.max(1, Math.floor(height * dpr));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+
     canvas.width = width;
     canvas.height = height;
+    syncSize();
 
     let animationId = 0;
     let tick = 0;
+    let running = true;
     const maxDepth = 1500;
 
     const createStar = (initialZ?: number): Star => ({
@@ -61,23 +88,22 @@ export function StarfieldBackground({
       twinkleOffset: Math.random() * Math.PI * 2,
     });
 
-    const stars: Star[] = Array.from({ length: count }, () => createStar());
+    const stars: Star[] = Array.from({ length: starCount }, () => createStar());
 
     const handleResize = () => {
       const next = container.getBoundingClientRect();
       width = next.width;
       height = next.height;
-      canvas.width = width;
-      canvas.height = height;
+      syncSize();
     };
 
     const ro = new ResizeObserver(handleResize);
     ro.observe(container);
 
     const animate = () => {
+      if (!running) return;
       tick += 1;
 
-      // Soft trail fade on void black
       ctx.fillStyle = "rgba(5, 5, 5, 0.28)";
       ctx.fillRect(0, 0, width, height);
 
@@ -99,12 +125,12 @@ export function StarfieldBackground({
 
         if (x < -8 || x > width + 8 || y < -8 || y > height + 8) continue;
 
-        // Smaller particles
         const size = Math.max(0.25, (1 - star.z / maxDepth) * 1.35);
         let opacity = (1 - star.z / maxDepth) * 0.75 + 0.12;
 
         if (twinkle && star.twinkleSpeed > 0.015) {
-          opacity *= 0.75 + 0.25 * Math.sin(tick * star.twinkleSpeed + star.twinkleOffset);
+          opacity *=
+            0.75 + 0.25 * Math.sin(tick * star.twinkleSpeed + star.twinkleOffset);
         }
 
         ctx.beginPath();
@@ -118,13 +144,32 @@ export function StarfieldBackground({
       animationId = requestAnimationFrame(animate);
     };
 
-    ctx.fillStyle = "#050505";
-    ctx.fillRect(0, 0, width, height);
-    animationId = requestAnimationFrame(animate);
+    const onVisibility = () => {
+      if (document.hidden) {
+        running = false;
+        cancelAnimationFrame(animationId);
+        return;
+      }
+      if (!running) {
+        running = true;
+        previousKick();
+      }
+    };
+
+    const previousKick = () => {
+      ctx.fillStyle = "#050505";
+      ctx.fillRect(0, 0, width, height);
+      animationId = requestAnimationFrame(animate);
+    };
+
+    previousKick();
+    document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
+      running = false;
       cancelAnimationFrame(animationId);
       ro.disconnect();
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [count, speed, starColor, twinkle]);
 
@@ -133,13 +178,12 @@ export function StarfieldBackground({
       ref={containerRef}
       className={cn(
         "pointer-events-none fixed inset-0 z-0 overflow-hidden bg-void",
-        className
+        className,
       )}
       aria-hidden
     >
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
 
-      {/* Brand red / silver atmosphere (kept subtle) */}
       <div
         className="absolute inset-0 opacity-40"
         style={{

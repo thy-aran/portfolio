@@ -42,6 +42,8 @@ export function MusicPlayer() {
     loop: false,
     interrupt: true,
     soundEnabled: true,
+    // Don't decode audio until the user presses play
+    preload: false,
     onplay: () => setIsPlaying(true),
     onend: () => {
       setIsPlaying(false);

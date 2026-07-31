@@ -24,34 +24,47 @@ const links = [
 
 /** Scroll to a section, accounting for ScrollTrigger pin spacers in document flow. */
 function scrollToSection(id: string) {
-  const el = document.getElementById(id);
-  if (!el) return;
+  // Wake deferred sections before measuring scroll position
+  window.dispatchEvent(
+    new CustomEvent("portfolio:navigate", { detail: { id } }),
+  );
 
-  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  gsap.killTweensOf(window);
+  let tries = 0;
+  const run = () => {
+    const el = document.getElementById(id);
+    if (!el) {
+      if (tries++ < 20) requestAnimationFrame(run);
+      return;
+    }
 
-  const y =
-    id === "hero" ? 0 : Math.max(0, Math.round(window.scrollY + el.getBoundingClientRect().top));
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    gsap.killTweensOf(window);
 
-  if (reduceMotion) {
-    window.scrollTo(0, y);
-    return;
-  }
+    const y =
+      id === "hero"
+        ? 0
+        : Math.max(0, Math.round(window.scrollY + el.getBoundingClientRect().top));
 
-  // Distance-scaled duration so long jumps still finish cleanly
-  const distance = Math.abs(window.scrollY - y);
-  const duration = Math.min(1.35, Math.max(0.55, distance / 3500));
+    if (reduceMotion) {
+      window.scrollTo(0, y);
+      return;
+    }
 
-  // autoKill:false — pin scrub updates can look like user scroll and abort the tween
-  gsap.to(window, {
-    duration,
-    ease: "power2.inOut",
-    overwrite: true,
-    scrollTo: {
-      y,
-      autoKill: false,
-    },
-  });
+    const distance = Math.abs(window.scrollY - y);
+    const duration = Math.min(1.35, Math.max(0.55, distance / 3500));
+
+    gsap.to(window, {
+      duration,
+      ease: "power2.inOut",
+      overwrite: true,
+      scrollTo: {
+        y,
+        autoKill: false,
+      },
+    });
+  };
+
+  requestAnimationFrame(run);
 }
 
 export function Navbar() {
